@@ -10,3 +10,5 @@
     - Identical MT outputs might need to be cleaned for previous workshops (before wmt16) in order to reduce noise.
         1. lowercase and punctuation removing. 
         2. Mean rank score for identical translations.
+    - Some data can be found here: http://www.statmt.org/wmt13/metrics-task.html
+    - Previous workshops: http://www.statmt.org/wmt16/
