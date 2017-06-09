@@ -7,22 +7,22 @@ import os
 
 import tensorflow as tf
 
-END_OF_SENTENCE = "<eos>"
 UNKNOWN_TOKEN_ID = 0
+END_OF_SENTENCE_ID = 1
+PADDING_TOKEN_ID = 2
+
+NUM_ALREADY_ALLOCATED_TOKEN = 3
 
 
 def _read_words(filename):
     with tf.gfile.GFile(filename, "r") as f:
-        return f.read().decode("utf-8").replace("\n", END_OF_SENTENCE).split()
+        return f.read().decode("utf-8").split()
 
 
 def _read_sentences(filename):
     with tf.gfile.GFile(filename, "r") as f:
         sentences = f.read().decode("utf-8").splitlines()
         
-    for sentence in sentences:
-        sentence.append(END_OF_SENTENCE)
-
     return sentences
 
 
@@ -34,7 +34,7 @@ def _build_vocab(filename):
     count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
 
     words, _ = list(zip(*count_pairs))
-    word_to_id = dict(zip(words, range(1, len(words) + 1)))  # 0 is UNKNOWN_TOKEN
+    word_to_id = dict(zip(words, range(NUM_ALREADY_ALLOCATED_TOKEN, len(words) + NUM_ALREADY_ALLOCATED_TOKEN)))
 
     return word_to_id
 
@@ -43,7 +43,9 @@ def _file_to_word_ids(filename, word_to_id):
     data = _read_sentences(filename)
     sentences = []
     for sentence in data:
-        sentences.append([word_to_id.get(word, UNKNOWN_TOKEN_ID) for word in sentence])
+        word_ids = [word_to_id.get(word, UNKNOWN_TOKEN_ID) for word in sentence.split()]
+        word_ids.append(END_OF_SENTENCE_ID)
+        sentences.append(word_ids)
 
     return sentences
 
