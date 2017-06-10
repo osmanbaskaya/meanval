@@ -60,9 +60,9 @@ def _file_to_word_ids(filename, word_to_id):
 
 
 def read_data(word_to_id, data_path=None, dataset_type='train'):
-    ref_fn = os.path.join(data_path, "%s.ref.sentences.txt" % dataset_type)
-    mt_fn = os.path.join(data_path, "%s.mt.sentences.txt" % dataset_type)
-    labels_fn = os.path.join(data_path, "%s.labels.txt" % dataset_type)
+    ref_fn = os.path.join(data_path, "wmt15.%s.ref.sentences.txt" % dataset_type)
+    mt_fn = os.path.join(data_path, "wmt15.%s.mt.sentences.txt" % dataset_type)
+    labels_fn = os.path.join(data_path, "wmt15.%s.labels.txt" % dataset_type)
 
     reference_sentences = _file_to_word_ids(ref_fn, word_to_id)
     mt_sentences = _file_to_word_ids(mt_fn, word_to_id)
@@ -161,10 +161,10 @@ def transform_data(ref_sequences, mt_sequences, labels, batch_size):
         yield ref_seqs, ref_seq_lengths, mt_seqs, mt_seq_lengths, labels
 
 
-def prepare_data(dataset_type, data_path="", batch_size=128):
+def prepare_data(dataset_type, data_path="datasets", batch_size=128):
     # FIXME: Use all the data to build vocabulary
     # Always use training data to build vocabulary.
-    word_to_id, vocab_size = _build_vocab(os.path.join(data_path, "train.ref.sentences.txt"))
+    word_to_id, vocab_size = _build_vocab(os.path.join(data_path, "wmt15.train.ref.sentences.txt"))
     reference_sentences, mt_sentences, labels = read_data(word_to_id, data_path=data_path, dataset_type=dataset_type)
     return transform_data(reference_sentences, mt_sentences, labels, batch_size=batch_size), vocab_size
 

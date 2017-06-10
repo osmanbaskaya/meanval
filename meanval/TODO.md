@@ -1,6 +1,7 @@
 ## Remaining work
 
-- Use validation data to validate what model learns. Right now we're using training data for validation.
+- + Use validation data to validate what model learns. Right now we're using training data for validation.
+- Write python script to divide data into train/validate/test. 
 - (50%) Defactor the code. Remove all the code related with the tutorial.
 - (Donsies!) Add code that prepare input/target values.
 - Add Tensorboard and check the current architecture works. (Convergence tests)

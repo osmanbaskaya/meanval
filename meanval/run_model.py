@@ -4,9 +4,11 @@ from preprocess import prepare_data
 
 def run():
     model = SimpleEncoderModel()
-    data_iterator, vocab_size = prepare_data(dataset_type='train', batch_size=64)
+    batch_size = 256
+    training_iterator, vocab_size = prepare_data(dataset_type='train', batch_size=batch_size)
+    validation_iterator, vocab_size = prepare_data(dataset_type='validate', batch_size=batch_size)
     model.create_model(vocab_size)
-    model.run(data_iterator)
+    model.run(training_iterator, validation_iterator)
 
 
 if __name__ == '__main__':

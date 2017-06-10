@@ -19,13 +19,14 @@ class WMT15DataPreprocessor(DataPreprocessor):
         translation_files = glob("../data/wmt15/wmt15-submitted-data/txt/system-outputs/*/*-en/*-en")
         reference_d = self.create_translation_dict_from_ref(reference_files)
         system_d = self.create_translation_dict_from_mt(translation_files)
-        dfn = self.transform_into_one_line_one_system(df)
+        dfn = WMT15DataPreprocessor.transform_into_one_line_one_system(df)
         dfn['reference'] = dfn.apply(lambda r: WMT15DataPreprocessor.get_transition_ref(r, reference_d), axis=1)
         dfn['transition'] = dfn.apply(lambda r: WMT15DataPreprocessor.get_transition_mt(r, system_d), axis=1)
-        dfn.to_csv('wmt15.csv', sep='\t', index=False)
-        print(dfn.size)
+        dfn.to_csv('wmt15.csv', sep='\t', index=False, header=False)
+        print("Shape: {}".format(dfn.shape))
 
-    def transform_into_one_line_one_system(self, df):
+    @staticmethod
+    def transform_into_one_line_one_system(df):
         d = dd(list)
         for i, row in df.iterrows():
             row = dict(row)

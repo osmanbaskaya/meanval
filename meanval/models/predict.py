@@ -78,33 +78,23 @@ class SimpleEncoderModel(object):
         self.train_op = train_op
         self.loss = loss
 
-    def run(self, batch_iterator):
+    def get_feed_dict_for_next_batch(self, data_iterator):
+        ref_seqs, ref_seq_length, mt_seqs, mt_seq_lengths, labels = next(data_iterator)
+        return {self.encoder_inputs_reference: ref_seqs, self.encoder_inputs_translation: mt_seqs,
+                self.encoder_ref_inputs_length: ref_seq_length,
+                self.encoder_mt_inputs_length: mt_seq_lengths, self.decoder_targets: labels}
+
+    def run(self, training_batch_iterator, validation_batch_iterator):
 
         sess = tf.Session()
         sess.run(tf.global_variables_initializer())
 
         for i in range(10000):
-            ref_seqs, ref_seq_length, mt_seqs, mt_seq_lengths, labels = next(batch_iterator)
-            feed_dict = {self.encoder_inputs_reference: ref_seqs,
-                         self.encoder_inputs_translation: mt_seqs,
-                         self.encoder_ref_inputs_length: ref_seq_length,
-                         self.encoder_mt_inputs_length: mt_seq_lengths,
-                         self.decoder_targets: labels}
-
-            _, l, predictions = sess.run([self.train_op, self.loss, self.pred], feed_dict=feed_dict)
-            # print(np.argmax(predictions, axis=1))
-            # print(predictions.shape)
-            if i % 500 == 0:
-                print('batch {}'.format(i))
-                print('  minibatch loss: {}'.format(sess.run(self.loss, feed_dict)))
-                predictions = sess.run(self.pred, feed_dict)
-                print(list(zip(predictions.reshape(len(predictions)), labels.reshape(len(labels)))))
-                print()
-                # print(np.argmax(predict_, axis=1))
-                # for i, (inp, pred) in enumerate(zip(fd[encoder_inputs].T, predict_.T)):
-                #     print('  sample {}:'.format(i + 1))
-                #     print('    input     > {}'.format(inp))
-                #     print('    predicted > {}'.format(pred))
-                #     if i >= 2:
-                #         break
-                # print()
+            feed_dict = self.get_feed_dict_for_next_batch(training_batch_iterator)
+            _, training_loss, predictions = sess.run([self.train_op, self.loss, self.pred], feed_dict=feed_dict)
+            if i % 1000 == 0:
+                feed_dict = self.get_feed_dict_for_next_batch(validation_batch_iterator)
+                validation_loss = sess.run([self.loss], feed_dict=feed_dict)
+                print('Batch {}'.format(i))
+                print('\tMini-batch Training loss: {}'.format(training_loss))
+                print('\tMini-batch Validation loss: {}'.format(validation_loss))
