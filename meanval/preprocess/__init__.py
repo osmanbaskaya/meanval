@@ -31,7 +31,8 @@ def _read_lines(filename):
 
 def _read_labels(filename):
     labels = _read_lines(filename)
-    return [int(label) for label in labels]
+    labels =  np.array([int(label) for label in labels])
+    return np.reshape(labels, (len(labels), 1))
 
 
 def _build_vocab(filename):
@@ -44,7 +45,7 @@ def _build_vocab(filename):
     words, _ = list(zip(*count_pairs))
     word_to_id = dict(zip(words, range(NUM_ALREADY_ALLOCATED_TOKEN, len(words) + NUM_ALREADY_ALLOCATED_TOKEN)))
 
-    return word_to_id
+    return word_to_id, len(word_to_id) + NUM_ALREADY_ALLOCATED_TOKEN
 
 
 def _file_to_word_ids(filename, word_to_id):
@@ -59,13 +60,15 @@ def _file_to_word_ids(filename, word_to_id):
 
 
 def read_data(word_to_id, data_path=None, dataset_type='train'):
-    sentences_fn = os.path.join(data_path, "%s.sentences.txt" % dataset_type)
+    ref_fn = os.path.join(data_path, "%s.ref.sentences.txt" % dataset_type)
+    mt_fn = os.path.join(data_path, "%s.mt.sentences.txt" % dataset_type)
     labels_fn = os.path.join(data_path, "%s.labels.txt" % dataset_type)
 
-    sentences = _file_to_word_ids(sentences_fn, word_to_id)
+    reference_sentences = _file_to_word_ids(ref_fn, word_to_id)
+    mt_sentences = _file_to_word_ids(mt_fn, word_to_id)
     labels = _read_labels(labels_fn)
 
-    return sentences, labels
+    return reference_sentences, mt_sentences, labels
 
 
 def data_producer(raw_data, batch_size, num_steps, name=None):
@@ -108,36 +111,61 @@ def data_producer(raw_data, batch_size, num_steps, name=None):
         return x, y
 
 
-def transform_data(sequences, labels, batch_size):
+def _prepare_batch_labels(labels, batch_size):
 
-    num_of_batch = math.ceil((len(sequences) / batch_size))
-    batches = []
+    num_of_batch = math.ceil((len(labels) / batch_size))
     label_batches = []
-    length_batches = []
     for index in range(num_of_batch):
-        batch = sequences[index * batch_size:index*batch_size+batch_size]
         label_batch = labels[index * batch_size:index*batch_size+batch_size]
         label_batches.append(label_batch)
 
+    for label_batch in cycle(label_batches):
+        yield label_batch
+
+
+def _prepare_batch_sequence(sequences, batch_size):
+
+    num_of_batch = math.ceil((len(sequences) / batch_size))
+    batches = []
+    length_batches = []
+    for index in range(num_of_batch):
+        # Batch related with Reference Translation
+        batch = sequences[index * batch_size:index * batch_size + batch_size]
+
+        # Lengths related with Reference Translation
+
         lengths = list(map(len, batch))
-        length_batches.append(lengths)
         max_seq_length = max(lengths)
 
         padded_batch = np.zeros(shape=[len(batch), max_seq_length], dtype=np.int32)
         for i, seq in enumerate(batch):
             for j, elem in enumerate(seq):
                 padded_batch[i, j] = elem
+
         padded_batch = padded_batch.swapaxes(0, 1)
+        length_batches.append(lengths)
         batches.append(padded_batch)
 
-    for seqs, labels, seq_lengths in zip(cycle(batches), cycle(label_batches), cycle(length_batches)):
-        yield seqs, labels, seq_lengths
+    for seq_batch, length_batch in zip(cycle(batches), cycle(length_batches)):
+        yield seq_batch, length_batch
+
+
+def transform_data(ref_sequences, mt_sequences, labels, batch_size):
+
+    label_batch_it = _prepare_batch_labels(labels, batch_size)
+    ref_seq_batch_it = _prepare_batch_sequence(ref_sequences, batch_size)
+    mt_seq_batch_it = _prepare_batch_sequence(mt_sequences, batch_size)
+
+    for (ref_seqs, ref_seq_lengths), (mt_seqs, mt_seq_lengths), labels, in zip(ref_seq_batch_it, mt_seq_batch_it,
+                                                                               label_batch_it):
+        yield ref_seqs, ref_seq_lengths, mt_seqs, mt_seq_lengths, labels
 
 
 def prepare_data(dataset_type, data_path="", batch_size=128):
+    # FIXME: Use all the data to build vocabulary
     # Always use training data to build vocabulary.
-    word_to_id = _build_vocab(os.path.join(data_path, "train.sentences.txt"))
-    sentences, labels = read_data(word_to_id, data_path=data_path, dataset_type=dataset_type)
-    return transform_data(sentences, labels, batch_size=batch_size), len(word_to_id) + NUM_ALREADY_ALLOCATED_TOKEN
+    word_to_id, vocab_size = _build_vocab(os.path.join(data_path, "train.ref.sentences.txt"))
+    reference_sentences, mt_sentences, labels = read_data(word_to_id, data_path=data_path, dataset_type=dataset_type)
+    return transform_data(reference_sentences, mt_sentences, labels, batch_size=batch_size), vocab_size
 
 
