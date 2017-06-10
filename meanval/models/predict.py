@@ -67,7 +67,7 @@ class SimpleEncoderModel(object):
         sess = tf.Session()
         sess.run(tf.global_variables_initializer())
 
-        for i in range(50):
+        for i in range(20):
             seqs, labels, seq_lengths = next(batch_iterator)
             feed_dict = {self.encoder_inputs: seqs,
                          self.encoder_inputs_length: seq_lengths,
@@ -76,11 +76,11 @@ class SimpleEncoderModel(object):
             _, l, predictions = sess.run([self.train_op, self.loss, self.pred], feed_dict=feed_dict)
             # print(np.argmax(predictions, axis=1))
             # print(predictions.shape)
-            if i % 2 == 0:
+            if i % 10 == 0:
                 print('batch {}'.format(i))
                 print('  minibatch loss: {}'.format(sess.run(self.loss, feed_dict)))
                 predict_ = sess.run(self.pred, feed_dict)
-                print(np.argmax(predict_))
+                print(np.argmax(predict_, axis=1))
                 # for i, (inp, pred) in enumerate(zip(fd[encoder_inputs].T, predict_.T)):
                 #     print('  sample {}:'.format(i + 1))
                 #     print('    input     > {}'.format(inp))

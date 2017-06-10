@@ -4,3 +4,4 @@
 - Add code that prepare input/target values.
 - Add Tensorboard and check the current architecture works. (Convergence tests)
 - Try different architecture and methodologies.
+- Add some code to analyze the raw dataset. Some descriptor statistics etc.
