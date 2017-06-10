@@ -3,6 +3,9 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+from itertools import cycle
+import math
+import numpy as np
 import os
 
 import tensorflow as tf
@@ -16,14 +19,19 @@ NUM_ALREADY_ALLOCATED_TOKEN = 3
 
 def _read_words(filename):
     with tf.gfile.GFile(filename, "r") as f:
-        return f.read().decode("utf-8").split()
+        return f.read().split()
 
 
-def _read_sentences(filename):
+def _read_lines(filename):
     with tf.gfile.GFile(filename, "r") as f:
-        sentences = f.read().decode("utf-8").splitlines()
+        sentences = f.read().splitlines()
         
     return sentences
+
+
+def _read_labels(filename):
+    labels = _read_lines(filename)
+    return [int(label) for label in labels]
 
 
 def _build_vocab(filename):
@@ -40,7 +48,7 @@ def _build_vocab(filename):
 
 
 def _file_to_word_ids(filename, word_to_id):
-    data = _read_sentences(filename)
+    data = _read_lines(filename)
     sentences = []
     for sentence in data:
         word_ids = [word_to_id.get(word, UNKNOWN_TOKEN_ID) for word in sentence.split()]
@@ -50,19 +58,14 @@ def _file_to_word_ids(filename, word_to_id):
     return sentences
 
 
-def evaluation_raw_data(data_path=None):
-    # TODO: Train / Validate / Test will be edited.
-    train_path = os.path.join(data_path, "train.txt")
-    valid_path = os.path.join(data_path, "train.txt")
-    test_path = os.path.join(data_path, "train.txt")
+def read_data(word_to_id, data_path=None, dataset_type='train'):
+    sentences_fn = os.path.join(data_path, "%s.sentences.txt" % dataset_type)
+    labels_fn = os.path.join(data_path, "%s.labels.txt" % dataset_type)
 
-    word_to_id = _build_vocab(train_path)
-    train_data = _file_to_word_ids(train_path, word_to_id)
-    valid_data = _file_to_word_ids(valid_path, word_to_id)
-    test_data = _file_to_word_ids(test_path, word_to_id)
-    vocabulary_size = len(word_to_id)
+    sentences = _file_to_word_ids(sentences_fn, word_to_id)
+    labels = _read_labels(labels_fn)
 
-    return train_data, valid_data, test_data, vocabulary_size
+    return sentences, labels
 
 
 def data_producer(raw_data, batch_size, num_steps, name=None):
@@ -103,3 +106,38 @@ def data_producer(raw_data, batch_size, num_steps, name=None):
                              [batch_size, (i + 1) * num_steps + 1])
         y.set_shape([batch_size, num_steps])
         return x, y
+
+
+def transform_data(sequences, labels, batch_size):
+
+    num_of_batch = math.ceil((len(sequences) / batch_size))
+    batches = []
+    label_batches = []
+    length_batches = []
+    for index in range(num_of_batch):
+        batch = sequences[index * batch_size:index*batch_size+batch_size]
+        label_batch = labels[index * batch_size:index*batch_size+batch_size]
+        label_batches.append(label_batch)
+
+        lengths = list(map(len, batch))
+        length_batches.append(lengths)
+        max_seq_length = max(lengths)
+
+        padded_batch = np.zeros(shape=[len(batch), max_seq_length], dtype=np.int32)
+        for i, seq in enumerate(batch):
+            for j, elem in enumerate(seq):
+                padded_batch[i, j] = elem
+        padded_batch = padded_batch.swapaxes(0, 1)
+        batches.append(padded_batch)
+
+    for seqs, labels, seq_lengths in zip(cycle(batches), cycle(label_batches), cycle(length_batches)):
+        yield seqs, labels, seq_lengths
+
+
+def prepare_data(dataset_type, data_path="", batch_size=128):
+    # Always use training data to build vocabulary.
+    word_to_id = _build_vocab(os.path.join(data_path, "train.sentences.txt"))
+    sentences, labels = read_data(word_to_id, data_path=data_path, dataset_type=dataset_type)
+    return transform_data(sentences, labels, batch_size=batch_size), len(word_to_id) + NUM_ALREADY_ALLOCATED_TOKEN
+
+
