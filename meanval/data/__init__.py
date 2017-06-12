@@ -1,4 +1,5 @@
 import pandas as pd
+from collections import Counter
 from glob import glob
 import os
 from collections import defaultdict as dd
@@ -83,3 +84,39 @@ class WMT15DataPreprocessor(DataPreprocessor):
         segmentid = row['segmentid']
         system = row['system']
         return d[srclang][system][segmentid]
+
+
+class Vocabulary(object):
+    def __init__(self, word_to_id, num_of_already_allocated_tokens=0):
+        self.word_to_id = word_to_id
+        self.num_of_already_allocated_tokens = num_of_already_allocated_tokens
+        self.__vocab_size = len(word_to_id) + num_of_already_allocated_tokens
+
+    def __iter__(self):
+        for word, idx in self.word_to_id.items():
+            yield word, idx
+
+    def __getitem__(self, item):
+        return self.word_to_id[item]
+
+    @property
+    def size(self):
+        return self.__vocab_size
+
+    def get(self, item, default=None):
+        return self.word_to_id.get(item, default)
+
+    @staticmethod
+    def build(words, min_occurrence=1, num_already_allocated_tokens=0):
+        counter = Counter(words)
+
+        # Remove words that are observed fewer than the threshold.
+        remove_list = [w for w, f in counter.items() if f < min_occurrence]
+        list(map(counter.pop, remove_list))
+
+        range_start = num_already_allocated_tokens
+        range_finish = len(counter) + num_already_allocated_tokens
+
+        word_to_id = dict(zip(counter.keys(), range(range_start, range_finish)))
+        return Vocabulary(word_to_id, num_already_allocated_tokens)
+

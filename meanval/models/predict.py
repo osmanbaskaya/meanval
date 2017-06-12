@@ -1,6 +1,5 @@
 import tensorflow as tf
 from tensorflow.contrib.rnn import LSTMCell, LSTMStateTuple
-import numpy as np
 
 
 class SimpleEncoderModel(object):
@@ -15,18 +14,24 @@ class SimpleEncoderModel(object):
         self.decoder_targets = tf.placeholder(shape=(None, 1), dtype=tf.int32, name='decoder_targets')
         self.pred = None
 
-    def create_model(self, vocab_size):
-        NUM_OF_RATINGS = 1
-        vocab_size = vocab_size
-        print("Vocabulary size: %s" % vocab_size)
+    def create_model(self, vocabulary, encoder_hidden_unit_size=20, embedding_weights=None, embedding_size=None):
 
-        input_embedding_size = 20
-        encoder_hidden_units = 20
+        print("Vocabulary size: %s" % vocabulary.size)
 
-        embeddings = tf.Variable(tf.random_uniform([vocab_size, input_embedding_size], -1.0, 1.0), dtype=tf.float32)
+        input_embedding_size = embedding_size
+
+        if embedding_weights is None:
+            assert input_embedding_size is not None, "user should provide either embedding_size or embedding_weights"
+            embeddings = tf.Variable(tf.random_uniform([vocabulary.size, input_embedding_size], -1.0, 1.0),
+                                     dtype=tf.float32)
+        else:
+            print("Embedding weights is used.")
+            print("Embeddings shape {}".format(embedding_weights.shape))
+            embeddings = tf.Variable(embedding_weights, dtype=tf.float32, trainable=False)
+
         encoder_ref_inputs_embedded = tf.nn.embedding_lookup(embeddings, self.encoder_inputs_reference)
         encoder_mt_inputs_embedded = tf.nn.embedding_lookup(embeddings, self.encoder_inputs_translation)
-        encoder_cell = LSTMCell(encoder_hidden_units)
+        encoder_cell = LSTMCell(encoder_hidden_unit_size)
 
         ((encoder_fw_outputs,
           encoder_bw_outputs),
@@ -61,8 +66,8 @@ class SimpleEncoderModel(object):
             h=encoder_final_state_h
         )
 
-        W = tf.Variable(tf.zeros([encoder_hidden_units * 4, NUM_OF_RATINGS]))
-        b = tf.Variable(tf.zeros([NUM_OF_RATINGS]))
+        W = tf.Variable(tf.zeros([encoder_hidden_unit_size * 4, 1]))
+        b = tf.Variable(tf.zeros([1]))
 
         # self.pred = tf.nn.softmax(tf.matmul(encoder_final_state.c, W) + b)  # Softmax
 
@@ -91,7 +96,7 @@ class SimpleEncoderModel(object):
 
         for i in range(10000):
             feed_dict = self.get_feed_dict_for_next_batch(training_batch_iterator)
-            _, training_loss, predictions = sess.run([self.train_op, self.loss, self.pred], feed_dict=feed_dict)
+            _, training_loss = sess.run([self.train_op, self.loss], feed_dict=feed_dict)
             if i % 1000 == 0:
                 feed_dict = self.get_feed_dict_for_next_batch(validation_batch_iterator)
                 validation_loss = sess.run([self.loss], feed_dict=feed_dict)

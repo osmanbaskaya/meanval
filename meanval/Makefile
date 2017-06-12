@@ -30,13 +30,14 @@ wmt15.all-en.csv: ../data/wmt15/wmt15-master/data
 	python run_preprocess.py $<
 
 prep-%: %.csv
+	source activate ${PY_ENV}
 	${SHUF} $< > ${DATASET_DIR}/$<.shuffled
 	cat $< | head -49937 | cut -f ${RANK_IDX} > ${DATASET_DIR}/$*.train.labels.txt
-	cat $< | head -49937 | cut -f ${REFERENCE_IDX} > ${DATASET_DIR}/$*.train.ref.sentences.txt
-	cat $< | head -49937 | cut -f ${MT_IDX} > ${DATASET_DIR}/$*.train.mt.sentences.txt
+	cat $< | head -49937 | cut -f ${REFERENCE_IDX} | python run_tokenizer.py ${DATASET_DIR}/$*.train.ref.sentences.txt
+	cat $< | head -49937 | cut -f ${MT_IDX} | python run_tokenizer.py ${DATASET_DIR}/$*.train.mt.sentences.txt
 	cat $< | tail -10000 | cut -f ${RANK_IDX} > ${DATASET_DIR}/$*.validate.labels.txt
-	cat $< | tail -10000 | cut -f ${REFERENCE_IDX} > ${DATASET_DIR}/$*.validate.ref.sentences.txt
-	cat $< | tail -10000 | cut -f ${MT_IDX} > ${DATASET_DIR}/$*.validate.mt.sentences.txt
+	cat $< | tail -10000 | cut -f ${REFERENCE_IDX} | python run_tokenizer.py ${DATASET_DIR}/$*.validate.ref.sentences.txt
+	cat $< | tail -10000 | cut -f ${MT_IDX} | python run_tokenizer.py ${DATASET_DIR}/$*.validate.mt.sentences.txt
 	rm ${DATASET_DIR}/$<.shuffled
 
 prep-all:

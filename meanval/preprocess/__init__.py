@@ -1,20 +1,26 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import collections
 from itertools import cycle
 import math
 import numpy as np
 import os
+from constant import NUM_ALREADY_ALLOCATED_TOKEN, UNKNOWN_TOKEN_ID, END_OF_SENTENCE_ID
+from data import Vocabulary
 
 import tensorflow as tf
+import nltk
+import sys
 
-UNKNOWN_TOKEN_ID = 0
-END_OF_SENTENCE_ID = 1
-PADDING_TOKEN_ID = 2
 
-NUM_ALREADY_ALLOCATED_TOKEN = 3
+def tokenize(out_fn, input_fn=None):
+    with open(out_fn, 'wt') as out_file:
+        if input_fn is None:
+            input_f = sys.stdin
+        else:
+            input_f = open(input_fn)
+        for line in input_f:
+            line = nltk.word_tokenize(line)
+            out_file.write(" ".join(line))
+            out_file.write("\n")
 
 
 def _read_words(filename):
@@ -38,14 +44,8 @@ def _read_labels(filename):
 def _build_vocab(filename):
     # TODO: add functionality to replace infrequent words with <unk>.
     data = _read_words(filename)
-
-    counter = collections.Counter(data)
-    count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
-
-    words, _ = list(zip(*count_pairs))
-    word_to_id = dict(zip(words, range(NUM_ALREADY_ALLOCATED_TOKEN, len(words) + NUM_ALREADY_ALLOCATED_TOKEN)))
-
-    return word_to_id, len(word_to_id) + NUM_ALREADY_ALLOCATED_TOKEN
+    vocabulary = Vocabulary.build(data, min_occurrence=1, num_already_allocated_tokens=NUM_ALREADY_ALLOCATED_TOKEN)
+    return vocabulary
 
 
 def _file_to_word_ids(filename, word_to_id):
@@ -164,8 +164,8 @@ def transform_data(ref_sequences, mt_sequences, labels, batch_size):
 def prepare_data(dataset_type, data_path="datasets", batch_size=128):
     # FIXME: Use all the data to build vocabulary
     # Always use training data to build vocabulary.
-    word_to_id, vocab_size = _build_vocab(os.path.join(data_path, "wmt15.train.ref.sentences.txt"))
-    reference_sentences, mt_sentences, labels = read_data(word_to_id, data_path=data_path, dataset_type=dataset_type)
-    return transform_data(reference_sentences, mt_sentences, labels, batch_size=batch_size), vocab_size
+    vocabulary = _build_vocab(os.path.join(data_path, "wmt15.train.ref.sentences.txt"))
+    reference_sentences, mt_sentences, labels = read_data(vocabulary, data_path=data_path, dataset_type=dataset_type)
+    return transform_data(reference_sentences, mt_sentences, labels, batch_size=batch_size), vocabulary
 
 
