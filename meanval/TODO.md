@@ -3,11 +3,13 @@
 ### Open issues
 
 - Write python script to divide data into train/validate/test. 
-- Replace numbers, dates etc according to embedding's format (e.g, <NUMBER>)
+- Replace numbers, dates etc according to embedding's format (e.g, \<NUMBER\>)
 - Add Tensorboard and check the current architecture works. (Convergence tests)
 - Try different architecture and methodologies.
 - Add some code to analyze the raw dataset. Some descriptor statistics etc.
 - Find a good MT model to start with. 
+- prepare dataset for other wmt tasks.
+- check whether embeddings work properly.
 
 ### Done
 - Use validation data to validate what model learns. Right now we're using training data for validation.
