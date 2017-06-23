@@ -1,4 +1,5 @@
 import tensorflow as tf
+import sys
 from tensorflow.contrib.rnn import LSTMCell, LSTMStateTuple
 
 
@@ -25,8 +26,8 @@ class SimpleEncoderModel(object):
             embeddings = tf.Variable(tf.random_uniform([vocabulary.size, input_embedding_size], -1.0, 1.0),
                                      dtype=tf.float32)
         else:
-            print("Embedding weights is used.")
-            print("Embeddings shape {}".format(embedding_weights.shape))
+            print("Embedding weights is used.", file=sys.stderr)
+            print("Embeddings shape {}".format(embedding_weights.shape), file=sys.stderr)
             embeddings = tf.Variable(embedding_weights, dtype=tf.float32, trainable=False)
 
         encoder_ref_inputs_embedded = tf.nn.embedding_lookup(embeddings, self.encoder_inputs_reference)
@@ -68,12 +69,6 @@ class SimpleEncoderModel(object):
 
         W = tf.Variable(tf.zeros([encoder_hidden_unit_size * 4, 1]))
         b = tf.Variable(tf.zeros([1]))
-
-        # self.pred = tf.nn.softmax(tf.matmul(encoder_final_state.c, W) + b)  # Softmax
-
-        # stepwise_cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
-        #     labels=tf.one_hot(self.decoder_targets, depth=NUM_OF_RATINGS, dtype=tf.float32), logits=self.pred)
-        # loss = tf.reduce_mean(stepwise_cross_entropy)
 
         self.pred = tf.matmul(encoder_final_state.c, W) + b
         loss = tf.losses.mean_squared_error(predictions=self.pred, labels=self.decoder_targets)
